@@ -3,28 +3,31 @@ import pokemonLogo from "./assets/PokemonLogo.svg";
 import CustomTabButton from "./common/CustomTabButton";
 
 const Pokemon = () => {
-  const [pokemonName, setPokemonName] = useState("");
-  const [pokemonSprite, setPokemonSprite] = useState(pokemonLogo);
-  const [pokemonSprite1, setPokemonSprite1] = useState();
-  const [firstAbility, setFirstAbility] = useState("");
-  const [secondAbility, setSecondAbility] = useState("");
+  const [pokemon, setPokemon] = useState({
+    name: "",
+    defaultSprite: pokemonLogo,
+    showdownSprite: "",
+    abilities: [],
+    summary: "",
+  });
+
   const [activeTab, setActiveTab] = useState("default");
-  const [validPokemon, setValidPokemon] = useState(true);
-  const [hasInput, setHasInput] = useState(true);
-  const [showAbilities, setShowAbilities] = useState(false);
-  const [pokemonInputValue, setPokemonInputValue] = useState("");
-  const [skillUsed, setSkillUsed] = useState("");
   const [loading, setLoading] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
-  const [pokemonSummary, setPokemonSummary] = useState("");
+  const [skillUsed, setSkillUsed] = useState("");
+  const [validPokemon, setValidPokemon] = useState(true);
+  const [hasInput, setHasInput] = useState(true);
+  const [showTabButtons, setShowTabButtons] = useState(false);
+  const [pokemonInputValue, setPokemonInputValue] = useState("");
 
   const fetchPokemonData = async () => {
     try {
-      if (!pokemonInputValue) {
+      if (!pokemonInputValue.trim()) {
         setHasInput(false);
-        setValidPokemon(true);
         return;
       }
+
+      setLoading(true);
 
       const response = await fetch(
         `https://pokeapi.co/api/v2/pokemon/${pokemonInputValue.toLowerCase()}`
@@ -34,35 +37,41 @@ const Pokemon = () => {
         `https://pokeapi.co/api/v2/pokemon-species/${pokemonInputValue.toLowerCase()}`
       );
 
-      setLoading(true);
-
       if (!response.ok) {
+        setPokemon({
+          name: "",
+          defaultSprite: pokemonLogo,
+          showdownSprite: "",
+          abilities: [],
+          summary: "",
+        });
         setValidPokemon(false);
-        setShowAbilities(false);
-        setPokemonSprite(pokemonLogo);
-        setPokemonSprite1("");
-        setPokemonName("");
-        setFirstAbility("");
-        setSecondAbility("");
-        setSkillUsed("");
+        setTabButton(false);
+
         throw new Error("Couldn't fetch pokemon");
       }
 
       const data = await response.json();
       const speciesData = await speciesResponse.json();
-      setShowAbilities(true);
-      setValidPokemon(true);
-      setHasInput(true);
-      setPokemonSprite(data.sprites.front_default);
-      setPokemonSprite1(data.sprites.other.showdown.front_default);
-      setPokemonName(data.name);
-      setFirstAbility(data.abilities[0]?.ability?.name);
-      setSecondAbility(data.abilities[1]?.ability?.name);
-
       const englishEntry = speciesData.flavor_text_entries.find(
         (entry) => entry.language.name === "en"
       );
-      setPokemonSummary(englishEntry.flavor_text.replace(/\s+/g, " "));
+
+      setPokemon({
+        name: data.name,
+        defaultSprite: data.sprites.front_default,
+        showdownSprite: data.sprites.other.showdown.front_default,
+        abilities: [
+          data.abilities[0]?.ability?.name,
+          data.abilities[1]?.ability?.name,
+        ].filter(Boolean),
+        summary: englishEntry?.flavor_text.replace(/\s+/g, " ") || "",
+      });
+
+      setShowTabButtons(true);
+      setValidPokemon(true);
+      setHasInput(true);
+      setPokemonInputValue("");
     } catch (error) {
       console.error(error);
     } finally {
@@ -79,48 +88,55 @@ const Pokemon = () => {
   };
 
   const resetPokemon = () => {
-    setPokemonName("");
-    setPokemonSprite(pokemonLogo);
-    setPokemonSprite1("");
-    setFirstAbility("");
-    setSecondAbility("");
+    setPokemon({
+      name: "",
+      defaultSprite: pokemonLogo,
+      showdownSprite: "",
+      abilities: [],
+      summary: "",
+    });
+
     setActiveTab("default");
     setValidPokemon(true);
     setHasInput(true);
-    setShowAbilities(false);
+    setShowTabButtons(false);
     setPokemonInputValue("");
-    setSkillUsed("");
     setLoading(false);
-    setPokemonSummary("");
   };
 
   return (
     <div className="bg-[#030712] h-screen flex-col flex items-center justify-center gap-2">
       <div className="flex flex-col items-center justify-center border-2 gap-1 border-[#e9e9ea] rounded-xl w-86 h-96">
         {activeTab === "default" ? (
-          <img src={pokemonSprite} alt="Pokemon Sprite" className="w-48 h-48" />
+          <img
+            src={pokemon.defaultSprite}
+            alt="Pokemon Sprite"
+            className="w-48 h-48"
+          />
         ) : (
           <img
-            src={pokemonSprite1}
+            src={pokemon.showdownSprite}
             alt="Pokemon Sprite"
             className="w-48 h-48"
           />
         )}
 
         <div className="flex">
-          <p className="text-[#e9e9ea] font-bold capitalize mr-1">
-            {pokemonName}
-          </p>
+          {pokemon.name && (
+            <p className="text-[#e9e9ea] font-bold capitalize mr-1">
+              {pokemon.name}
+            </p>
+          )}
           {showMessage && <span className="text-[#e9e9ea]">{skillUsed}</span>}
         </div>
 
-        {pokemonSummary && (
+        {pokemon.summary && (
           <p className="text-[#e9e9ea] text-sm px-4 text-center">
-            {pokemonSummary}
+            {pokemon.summary}
           </p>
         )}
 
-        {showAbilities && (
+        {showTabButtons && (
           <div className="flex pt-4">
             <CustomTabButton
               width="w-28"
@@ -181,38 +197,31 @@ const Pokemon = () => {
         </p>
       )}
 
-      {showAbilities && (
+      {pokemon.abilities.length > 0 && (
         <>
           <p className="text-[#e9e9ea] font-bold">Use Skills: </p>
-          <div className="flex gap-1 justify-center content-center items-center">
-            <button
-              className="text-[#e9e9ea] border-2 p-2 rounded-4xl cursor-pointer hover:scale-110"
-              onClick={() => {
-                setSkillUsed(`used ${firstAbility}!`);
-                triggerMessage();
-              }}
-            >
-              {firstAbility}
-            </button>
-
-            <button
-              className="text-[#e9e9ea] border-2 p-2 rounded-4xl cursor-pointer hover:scale-110"
-              onClick={() => {
-                setSkillUsed(`used ${secondAbility}!`);
-                triggerMessage();
-              }}
-            >
-              {secondAbility}
-            </button>
+          <div className="flex gap-1">
+            {pokemon.abilities.map((ability, index) => (
+              <button
+                key={index}
+                className="text-[#e9e9ea] border-2 p-2 rounded-4xl cursor-pointer hover:scale-110"
+                onClick={() => {
+                  setSkillUsed(`used ${ability}!`);
+                  triggerMessage();
+                }}
+              >
+                {ability}
+              </button>
+            ))}
           </div>
         </>
       )}
 
-      <button aria-label="Search for Pikachu"
+      <button
+        aria-label="Search for Pikachu"
         className="text-[#e9e9ea] border-2 px-4 py-2 rounded-4xl cursor-pointer hover:scale-110"
         onClick={() => {
           fetchPokemonData();
-          setPokemonInputValue("");
         }}
       >
         Search Pokémon
