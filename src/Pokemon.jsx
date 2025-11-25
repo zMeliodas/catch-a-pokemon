@@ -20,6 +20,12 @@ const Pokemon = () => {
 
   const fetchPokemonData = async () => {
     try {
+      if (!pokemonInputValue) {
+        setHasInput(false);
+        setValidPokemon(true);
+        return;
+      }
+
       const response = await fetch(
         `https://pokeapi.co/api/v2/pokemon/${pokemonInputValue.toLowerCase()}`
       );
@@ -27,12 +33,6 @@ const Pokemon = () => {
       const speciesResponse = await fetch(
         `https://pokeapi.co/api/v2/pokemon-species/${pokemonInputValue.toLowerCase()}`
       );
-
-      if (!pokemonInputValue) {
-        setHasInput(false);
-        setValidPokemon(true);
-        return;
-      }
 
       setLoading(true);
 
@@ -208,7 +208,7 @@ const Pokemon = () => {
         </>
       )}
 
-      <button
+      <button aria-label="Search for Pikachu"
         className="text-[#e9e9ea] border-2 px-4 py-2 rounded-4xl cursor-pointer hover:scale-110"
         onClick={() => {
           fetchPokemonData();
